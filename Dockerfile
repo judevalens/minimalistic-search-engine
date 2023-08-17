@@ -1,14 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM ubuntu:22.04
+FROM openjdk:22-slim-bullseye
 
-# install app dependencies
-RUN apt-get update && apt-get install -y python3 python3-pip
-RUN pip install flask==2.1.*
+WORKDIR /app
 
-# install app
-COPY hello.py /
+COPY target/MacayaSearch-1.0-SNAPSHOT.jar .
 
-# final configuration
-ENV FLASK_APP=hello
-EXPOSE 8000
-CMD flask run --host 0.0.0.0 --port 8000
+ENTRYPOINT ["java","-jar","MacayaSearch-1.0-SNAPSHOT.jar"]

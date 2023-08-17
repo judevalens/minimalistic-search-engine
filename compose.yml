@@ -1,0 +1,32 @@
+services:
+  spider-node-1:
+    image: mse:latest
+    ports:
+      - "2551:2551"
+    environment:
+      NODE_PORT: 2551
+      HOST_NAME: 172.20.128.2
+    networks:
+      static-network:
+        ipv4_address: 172.20.128.2
+    volumes:
+      - ./src/main/resources/application.conf:/app/application.conf
+
+  spider-node-2:
+    image: mse:latest
+    ports:
+      - "2552:2552"
+    networks:
+      static-network:
+        ipv4_address: 172.20.128.3
+    environment:
+      NODE_PORT: 2552
+      HOST_NAME: 172.20.128.3
+    volumes:
+      - ./src/main/resources/application.conf:/app/application.conf
+networks:
+  static-network:
+      ipam:
+        config:
+          - subnet: 172.20.0.0/16
+            #docker-compose v3+ do not use ip_range
