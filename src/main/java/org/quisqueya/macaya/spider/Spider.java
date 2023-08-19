@@ -2,13 +2,20 @@ package org.quisqueya.macaya.spider;
 
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.*;
+import akka.cluster.typed.Cluster;
 
 public class Spider extends AbstractBehavior<Spider.Command> {
     public interface Command {
     }
 
     public static class SpiderConf implements Command {
-        public SpiderConf() {
+        final int nFetcher;
+        final int nUrlFrontier;
+        final int nParser;
+        public SpiderConf(int nFetcher, int nUrlFrontier, int nParser) {
+            this.nFetcher = nFetcher;
+            this.nUrlFrontier = nUrlFrontier;
+            this.nParser = nParser;
         }
     }
 
@@ -17,6 +24,10 @@ public class Spider extends AbstractBehavior<Spider.Command> {
 
     private Spider(ActorContext<Command> context) {
         super(context);
+        Cluster cluster = Cluster.get(context.getSystem());
+        System.out.printf("Master node is up: %s! address: %s\n",cluster.state().isMemberUp(cluster.selfMember().address())
+        ,cluster.selfMember().address().toString());
+
     }
 
     public static Behavior<Command> create() {
@@ -25,8 +36,7 @@ public class Spider extends AbstractBehavior<Spider.Command> {
 
     @Override
     public Receive<Command> createReceive() {
-
-        return newReceiveBuilder()
+        return   newReceiveBuilder()
                 .onMessage(SpiderConf.class, this::onConf)
                 .build();
     }
