@@ -18,26 +18,20 @@ import org.glassfish.jersey.server.Uri;
 import javax.management.Query;
 
 public class SpiderUri {
-    URI uri;
-    final String DEFAULT_SCHEME = "http";
+
+    final static String DEFAULT_SCHEME = "http";
     private Path path;
 
-    public SpiderUri(URI uri) {
-        this.uri = uri;
-    }
 
-
-    public URI normalize() {
+    public static URI normalize(URI uri) {
         var normalizedUri = uri.normalize();
         var path = Paths.get(normalizedUri.getPath());
         path.iterator().forEachRemaining((currentPath) -> {
-            System.out.printf("%s\n", currentPath);
         });
-        System.out.println(normalizedUri.toString());
         return normalizedUri;
     }
 
-    public URI spiderNormalize() {
+    public static URI spiderNormalize(URI uri) {
         var normalizedUri = uri.normalize();
         var path = Paths.get(normalizedUri.getPath());
 
@@ -46,25 +40,21 @@ public class SpiderUri {
         http://example.com/a/index.html → http://example.com/a/
         http://example.com/default.asp → http://example.com/
          */
-        uri.getQuery();
-
         if (path.getNameCount() == 1) {
             var baseIndex = FileNameUtils.getBaseName(path.toString());
             if (baseIndex.equals("index") || baseIndex.equals("default")) {
                 path = Paths.get("/");
             }
         }
-        System.out.println(normalizedUri);
         try {
             normalizedUri = new URI(DEFAULT_SCHEME, uri.getHost(), path.toString(), sortQuery(normalizedUri), null);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        System.out.println(normalizedUri);
         return normalizedUri;
     }
 
-    private String sortQuery(URI uri) {
+    private static String sortQuery(URI uri) {
         HttpUrl url = HttpUrl.get(uri);
         if (url == null) {
             return null;
