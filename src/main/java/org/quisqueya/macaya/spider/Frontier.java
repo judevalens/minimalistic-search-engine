@@ -8,7 +8,6 @@ import akka.actor.typed.javadsl.Receive;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jetbrains.annotations.NotNull;
-import org.msgpack.core.MessagePack;
 import org.msgpack.jackson.dataformat.msgpack.MessagePackFactory;
 import org.quisqueya.macaya.JedisPoolManager;
 import org.quisqueya.macaya.spider.pojos.QueueJob;
@@ -16,7 +15,6 @@ import org.quisqueya.macaya.utils.SpiderUri;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -27,8 +25,7 @@ import java.util.Random;
 
 public class Frontier extends AbstractBehavior<Frontier.Command> {
     Jedis jedis;
-    private final Logger logger
-            = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private Frontier(ActorContext<Command> context, JedisPoolManager jedisPool) {
         super(context);
@@ -58,26 +55,23 @@ public class Frontier extends AbstractBehavior<Frontier.Command> {
 
     @Override
     public Receive<Command> createReceive() {
-
-        return newReceiveBuilder()
-                .onMessage(Frontier.QueueUrl.class, this::onQueueUrl)
-                .build();
+        return newReceiveBuilder().onMessage(Frontier.QueueUrl.class, this::onQueueUrl).build();
     }
 
     public Behavior<Command> onQueueUrl(@NotNull QueueUrl queueUrl) {
-        System.out.printf("max CPU: %d\n",Runtime.getRuntime().availableProcessors());
-        URI uri = URI.create(queueUrl.url);
+        System.out.printf("max CPU: %d\n", Runtime.getRuntime().availableProcessors());
+        URI uri = URI.create(queueUrl.url+ new Random().nextInt(10000000));
         URI normalizedUri = SpiderUri.spiderNormalize(uri);
-        QueueJob job = new QueueJob(queueUrl.url, normalizedUri.toString(), new Random().nextInt(10000000));
+        QueueJob job = new QueueJob(uri.getHost(),queueUrl.url, normalizedUri.toString(), new Random().nextInt(10000000));
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
             var serializedValue = objectMapper.writeValueAsBytes(job);
-            var result = jedis.fcall("queue_url".getBytes(StandardCharsets.UTF_8), Arrays.asList(crawlSession.getBytes(), (crawlSession + "hash").getBytes()), Collections.singletonList((serializedValue)));
-            if (result == null) {
+            var result = jedis.fcall("queue_crawling_job".getBytes(StandardCharsets.UTF_8), Arrays.asList(RedisKeys.HostNamesZset.getBytes(), RedisKeys.VisitedUrlSet.getBytes(), RedisKeys.SessionID.getBytes()), Collections.singletonList((serializedValue)));
+            if (result == null || (Long) result == 0) {
                 logger.debug("Failed to queue job {}", job.normalizedUrl);
                 return this;
             }
-            logger.info("Queued {} url crawl job: {}", result,job.normalizedUrl);
+            logger.info("Queued {} url crawl job: {}", result, job.normalizedUrl);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
